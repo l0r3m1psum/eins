@@ -42,7 +42,7 @@
 \maketitle
 \dedication{Da grandi poteri,\\ derivano grandi responsabilità.}
 \begin{abstract}
-	This work explores the different possible implementation of the Einstein sum, a mathematical notation used in many fields of science, such as physics and engineering, to represent the summation of products of tensors. The Einstein sum is a powerful tool for simplifying complex mathematical expressions and can be used to derive important results in various fields. In this work, we will discuss the different ways to implement the Einstein sum, including its use in tensor calculus. We will also explore the advantages and disadvantages of each implementation.
+	This work explores the different possible implementation of the Einstein sum, a mathematical notation used in many fields of science, such as physics and engineering, to represent the summation of products of tensors. The Einstein sum is a powerful tool for simplifying complex mathematical expressions and can be used to derive important results in various fields. In this work, we will discuss different ways to implement the Einstein sum, including its use in tensor calculus. We will also explore the advantages and disadvantages of each implementation.
 \end{abstract}
 
 \tableofcontents
@@ -179,7 +179,6 @@ Since the Einstein notation is so expressive, no single algorithm can handle eve
 	\item [BLAS Pattern Dispatching:]
 	      When treating 1D or 2D patterns (such as Dot, GER, or GEMV), the best solution is to route the data to \textbf{Basic Linear Algebra Subprograms (BLAS)}. These are hardware-vendor-tuned kernels (like Intel MKL or Apple Accelerate) that use sophisticated cache-blocking and tiling techniques.
 
-	      By utilizing BLAS, we ensure that standard operations achieve the peak theoretical FLOPS (Floating Point Operations Per Second) of the host CPU or GPU.
 
 \end{description}
 
@@ -298,7 +297,7 @@ The core logic follows a three-stage pipeline: \textbf{Permute, Flatten, and Mul
 	      \end{description}
 	      This grouping ensures that the ``right side'' of Tensor A (the dimensions being summed over) aligns perfectly with the ``left side'' of Tensor B in linear memory.
 
-	\item [Formal Proof via Matricization:] The validity of this reduction is grounded in the mathematical theory of \textbf{unfolding} or \textbf{matricization} \cite{kolda2009tensor}. Let $\mathcal{A}$ be a tensor of rank $N$. A matricization is a bijective mapping that reorders the elements of $\mathcal{A}$ into a matrix $A$.
+	\item [Formal Proof via Matricization:] The validity of this reduction is grounded in the mathematical theory of \textbf{unfolding}, or \textbf{matricization} \cite{kolda2009tensor}. Let $\mathcal{A}$ be a tensor of rank $N$. A matricization is a bijective mapping that reorders the elements of $\mathcal{A}$ into a matrix $A$.
 
 	      \textit{Proof:} Consider the generalized contraction $\mathcal{C}_{IJ} = \sum_{K} \mathcal{A}_{IK} \mathcal{B}_{KJ}$. We define a mapping $\phi$ that flattens the multi-index $I$ into a single row index $i$, and $K$ into a column index $k$. If $M = \prod \text{shape}(I)$ and $L = \prod \text{shape}(K)$, then $A \in \mathbb{R}^{M \times L}$ where $A_{\phi(I), \phi(K)} = \mathcal{A}_{IK}$. By performing a similar mapping for $\mathcal{B}$ into $B \in \mathbb{R}^{L \times N}$, the summation becomes:
 	      \begin{equation}
