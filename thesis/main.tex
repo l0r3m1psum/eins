@@ -8,6 +8,8 @@
 \usepackage{amssymb}
 \usepackage{graphicx}
 \usepackage{pgfplots}
+\usepackage{cite}
+\usepackage{pdfpages}
 \pgfplotsset{compat=1.18}
 
 \hypersetup{	
@@ -47,39 +49,51 @@
 
 \mainmatter
 
-\chapter{Introduction to Einstein Summation and Tensor Calculus}
+\chapter{Introduction to Einstein Summation and Tensors}
 
-% NOTE(Diego): titolo molto pomposo, soprattutto perché di questa "natura dei tensori" non ne parli mai
-\section{The Nature of Tensors and the Einstein Convention}
+For our work we need to first define what is a tensor and what is the Einstein summation convention.
+Tensors are a widely used representations of multidimensional data in scientific and engineering applications.\cite{Klaus2023CompilingTE}
+In the physical world—specifically in architectural engineering and structural analysis—tensors represent physical quantities that are independent
+of any specific coordinate system. For example, the stress tensor $\sigma_{ij}$ describes the internal forces within a solid body.
+To calculate the interaction between these multi-dimensional objects, we can use a robust notation: the \textbf{Einstein Summation Convention}.
 
-% NOTE(Diego): Allora per quanto poetica come frase non direi che i tensori sono all'intersezione di questi tre campi siccome sono usati in in modo molto diverso nei tre campi e in informatica sono più che altro "array multidimensionali" senza proprietà interessanti a differenza dei corrispettivi matematici e fisici. Puoi dire che tutti e tre hanno bisogno di oggetti con più indici e farci le contrazioni ma non molto altro in comune (putroppo).
-At the intersection of mathematics, physics, and computer science lies the concept of the \textbf{Tensor}. In its simplest form, a tensor is a multi-dimensional array of numerical values. While a scalar is a 0-order tensor, a vector is a 1st-order tensor, and a matrix is a 2nd-order tensor, the abstraction extends infinitely to $N$-th order tensors.
-
-In the physical world—specifically in architectural engineering and structural analysis—tensors represent physical quantities that are independent of any specific coordinate system. For example, the stress tensor $\sigma_{ij}$ describes the internal forces within a solid body. To calculate the interaction between these multi-dimensional objects, we require a robust notation: the \textbf{Einstein Summation Convention}.
-
-% NOTE(Diego): serve la citazione.
-Introduced by Albert Einstein in 1916, the convention simplifies tensor algebra by removing the explicit summation symbol ($\sum$). The rule is as follows: \textit{whenever an index variable appears twice in a single term, it implies a summation over the entire range of that index.}
+The summation convention was
+introduced by Einstein in 1916. It implies that whenever an index in a term is repeated,
+once as a superindex and once as a subindex, a summation over that index is understood. With
+these conventions, matrix vector multiplication is written.\cite{AHLANDER20021007}
 
 Consider the transformation of a vector $v$ by a matrix $M$:
 \begin{equation}
 	y_i = \sum_{j=1}^{n} M_{ij} v_j \quad \longrightarrow \quad y_i = M_{ij} v_j
 \end{equation}
-% NOTE(Diego): molto generative pretrained transformer questa frase (i.e. mi sembra un po' vuota)
-This shorthand does not merely save space; it highlights the \textbf{contraction}—the process of reducing the dimensionality of the system by "contracting" shared indices.
-
+This notation formalizes the \textbf{contraction} process: a linear mapping that reduces the rank of a tensor by summing over one or more indices.
+\section{Tensors memory layout and access patterns}
+In the implementations that we will see in the next chapter, tensors are stored in contiguous memory buffers. The way these multi-dimensional arrays are laid out in memory is crucial for performance. The two most common layouts are \textbf{Row-Major} (C-style) and \textbf{Column-Major} (Fortran-style). In a row-major layout, the last index changes fastest, while in column-major, the first index changes fastest.
+For example, a 3D tensor $T_{ijk}$ with shape $(2, 2, 2)$ would be stored as:
+\begin{center}
+	\includegraphics[width=0.8\textwidth]{images/tensor_in_memory.pdf}
+\end{center}
+The choice of layout affects the \textbf{memory access patterns} during tensor contractions. Accessing elements that are stored contiguously in memory leads to better cache performance and faster execution. For instance, in a row-major layout, iterating over the last index $k$ of $T_{ijk}$ will be more efficient than iterating over the first index $i$.
+Furthermore we can define the \textbf{stride} of a tensor as the number of elements to skip in memory to move from one index to the next. For a tensor with shape $(d_0, d_1, d_2)$ in row-major order, the strides would be:
+\begin{equation}
+	\text{stride}_0 = d_1 \cdot d_2, \quad \text{stride}_1 = d_2, \quad \text{stride}_2 = 1
+\end{equation}
+and the offset as \begin{equation}
+	\text{Offset} = i \cdot \text{stride}_0 + j \cdot \text{stride}_1 + k \cdot \text{stride}_2
+\end{equation}
+Understanding these concepts allows us to implement efficient tensor operations, as they directly impact the performance of algorithms that rely on tensor contractions, such as those expressed in Einstein summation notation.
 \section{Einsum in the Architecture of Neural Networks}
 
-% NOTE(Diego): tensore (oggetto matematico con indici) != tensore (o NDArray) struttura dati, perché ci sono varie strutture dati che si possono usare per rappressentare i tensori (e.g. quella che usa NumPy, quella che usa PyTorch ecc...)
-% NOTE(Diego): non tutte le operazioni in una rete sono contrazioni tensoriali, pensa alle banali attivazioni o la convoluzione che richiede una estensione al formalismo che hai introdotto prima.
-In the modern computational landscape, tensors are the primary data structure for \textbf{Deep Learning}. Every operation in a neural network—from simple linear layers to complex attention mechanisms—is fundamentally a tensor contraction.
+In the modern computational landscape, tensors are the primary data structure for \textbf{Deep Learning}.
 
 \subsection{Linear Layers and Batch Processing}
 
-% NOTE(Diego): "most foundamental" è un termine molto forte, per quanto in linea di principio è anche vero non è molto accademico e, a meno che, non lo sostieni con dell'evidenza o un trattamento matematico più rigorioso eviterei questi termini.
-% NOTE(Diego): Il numero di punti processati dimende da quello che stai facendo, per esempio se vuoi fare inferenza in tempo reale su un telefono la cosa più importante è la latenza e là si che ci interessa solo processare solo un punto. Il discorso che fai vale solo per l'addestramento.
-In modern deep learning, a Linear Layer is the most fundamental transformation. Mathematically, it represents an affine transformation of the input data. However, in a production environment, we rarely process a single data point at a time. Instead, we utilize \textbf{Batch Processing}, where multiple inputs are grouped into a single higher-order tensor to exploit the parallel processing power of GPUs.
 
-Consider a weight matrix $W$ with dimensions $(I, O)$, where $I$ is the number of input features and $O$ is the number of output features. If we process a single vector $x$ of size $I$, the operation is a standard matrix-vector product. However, with a batch size $B$, our input becomes a 2D tensor $X \in \mathbb{R}^{B \times I}$.
+In modern deep learning architectures, a Linear Layer serves as an affine transformation that projects an input tensor into a new feature space via a learned weight matrix.
+This operation is fundamentally a \textbf{tensor contraction}, which can be concisely expressed using the Einstein summation convention.
+Consider a weight matrix $W$ with dimensions $(I, O)$, where $I$ is the number of input features and $O$ is the number of output features.
+If we process a single vector $x$ of size $I$, the operation is a standard matrix-vector product. However, with a batch size $B$,
+our input becomes a 2D tensor $X \in \mathbb{R}^{B \times I}$.
 
 Using the \texttt{einsum} notation, the operation is expressed as:
 \begin{equation}
@@ -87,93 +101,89 @@ Using the \texttt{einsum} notation, the operation is expressed as:
 \end{equation}
 
 This specific notation provides several computational advantages:
-% NOTE(Diego): se devi fare una cosa del genere usa l'ambiente description
-\begin{itemize}
-	\item \textbf{Feature Mapping:} The index $i$ is the "contraction dimension." It represents the internal connection where each input feature is weighted and summed to contribute to an output feature.
-	\item \textbf{Batch Preservation:} The index $b$ is a "broadcast index." It remains untouched by the summation, meaning the same weights $W$ are applied identically to every sample in the batch.
-	\item \textbf{Parallelism:} By representing the batch as a tensor dimension, the underlying \texttt{einsum} engine can dispatch the entire operation as a single \texttt{GEMM} (General Matrix Multiply) call.
-\end{itemize}
+\begin{description}
+	\item [Feature Mapping:] The index $i$ is the "contraction dimension." It represents the internal connection where each input feature is weighted and summed to contribute to an output feature.
+	\item [Batch Preservation:] The index $b$ is a "broadcast index." It remains untouched by the summation, meaning the same weights $W$ are applied identically to every sample in the batch.
+	\item [Parallelism:] By representing the batch as a tensor dimension, the underlying \texttt{einsum} engine can dispatch the entire operation as a single \texttt{GEMM} (General Matrix Multiply) call.
+\end{description}
 
-% NOTE(Diego): "does not define the math" è una frase che può andare bene in un contesto colloquiale ma accademicamente la matematica è un intero campo a parte è meglio se usi il termine calculations o operations
-Without the batch dimension, the hardware would have to launch $B$ separate, smaller kernels, leading to significant overhead and under-utilization of the high-speed memory bus. Thus, the Einstein notation does not just describe the math; it defines the \textbf{memory access pattern} that makes large-scale neural network training feasible.
 
-\subsection{The Transformer and Multi-Head Attention}
+Without the batch dimension, the hardware would have to launch $B$ separate, smaller kernels, leading to significant overhead and under-utilization of the high-speed memory bus.
+Thus, the Einstein notation does not just describe the operations, it defines the \textbf{memory access pattern}.
 
-% NOTE(Diego): Sì ok ma se vuoi fare questo esempio devi contestualizzarlo molto meglio.
-One of the most significant uses of \texttt{einsum} today is in the Transformer architecture. These models utilize 4-dimensional tensors to represent batches, sequence lengths, attention heads, and feature dimensions. A typical attention score calculation involves:
+\subsection{Broader Applications: From Fluids to Architecture}
+
+The utility of the Einstein summation convention extends far beyond the optimization of neural networks; it can describe physical systems where multi-axial forces interact.
+
+\subsubsection{Continuum Mechanics and Structural Elasticity}
+In structural engineering, the linear elastic response of a material—such as a reinforced concrete boundary—is governed by the generalized \textbf{Hooke’s Law}. This relationship defines the second-order stress tensor $\sigma_{ij}$ as the result of a contraction between a fourth-order elasticity (stiffness) tensor $\mathcal{C}_{ijkl}$ and a second-order strain tensor $\varepsilon_{kl}$ \cite{itskov2019tensor}:
+
 \begin{equation}
-	\text{Score}_{btsh} = Q_{bthd} K_{bshd}
+	\sigma_{ij} = \mathcal{C}_{ijkl} \varepsilon_{kl}
 \end{equation}
-Expressing this as a sequence of standard matrix multiplications would require multiple permutations and reshapes. \texttt{einsum} provides a declarative interface that allows the underlying engine to optimize the memory layout automatically.
 
-\section{Broader Applications: From Fluids to Architecture}
+\begin{center}
+	\includegraphics[width=0.8\textwidth]{images/hookes_law.pdf}
+\end{center}
 
-% NOTE(Diego): vedi sopra, fai qualche esempio di formula, così mi stai dicendo qualcosa di cui il lettore si deve fidare senza fonti.
-The utility of \texttt{einsum} extends far beyond artificial intelligence. In \textbf{Continuum Mechanics}, the convention is used to describe the deformation of materials. In an architectural project the Einstein sum can be used to model elasticity tensors that describe how the building's concrete perimeter reacts to thermal expansion. In \textbf{Fluid Dynamics}, it can model wind pressure around the central courtyard public spaces using the Navier-Stokes equations in tensor form.
+This operation involves a double contraction over indices $k$ and $l$, effectively reducing a system of 81 potential coefficients in the elasticity tensor to a 9-component stress representation. Within the framework developed in this work, this is concisely expressed as \texttt{einsum('ijkl,kl->ij')}. Such a formulation can be used to simulate how external loads or thermal expansion distribute internal forces across complex architectural boundaries \cite{gurtin1981continuum}.
 
-% NOTE(Diego): s/Low-Level Execution/Implementation/ un'altro termine valido è Algorithm
-\section{From Mathematical Notation to Low-Level Execution}
+\subsubsection{Fluid Dynamics and Wind Modeling}
+Similarly, modeling the environmental conditions of a built environment—such as the wind pressure distribution within a central courtyard—requires the \textbf{Navier-Stokes equations}. In their tensor form, the advection term describes how the velocity field $u$ interacts with its own gradient \cite{batchelor1967fluid}:
 
-% NOTE(Diego): La frase è molto più pomposa di quanto è necessario, innanzitutto cos'è una stringa simbolica e cosa una non? Poi sul fatto che sia un problema ingegnieristico complesso non mi sentirei di dillo, puoi dire che non è un problema banale.
-The translation of a symbolic string like \texttt{"ij,jk->ik"} into machine code is a complex engineering task. The implementation must bridge the gap between high-level logic and \textbf{Low-Level Stride Arithmetic}.
+\begin{equation}
+	\rho \left( \frac{\partial u_i}{\partial t} + u_j \frac{\partial u_i}{\partial x_j} \right) = -\frac{\partial p}{\partial x_i} + \mu \frac{\partial^2 u_i}{\partial x_j \partial x_j}
+\end{equation}
+
+
+The term $u_j \frac{\partial u_i}{\partial x_j}$ represents a tensor contraction between the velocity vector and the velocity gradient tensor. In a computational fluid dynamics (CFD) context, an \texttt{einsum} implementation facilitates the calculation of these gradients across a discretized 3D grid, mapping the local flow direction to the resultant acceleration vector through the contraction \texttt{einsum('j,ji->i')}.
+
+\section{From Mathematical Notation to algorithm}
+
+The translation of a symbolic string like \texttt{"ij,jk->ik"} into machine code is not a trivial task. The implementation must bridge the gap between high-level logic and \textbf{Low-Level Stride Arithmetic}.
 
 \subsection{The Compilation Pipeline}
 
 When a user calls an \texttt{einsum} function, the system undergoes several stages of translation:
-% NOTE(Diego): usa ambiente description (vedi sopra)
-\begin{enumerate}
-	\item \textbf{Parsing:} The string is analyzed to create bitmasks representing index occupancy.
-	\item \textbf{Contraction Mapping:} The engine identifies which indices are shared (summation) and which are unique (free).
-	\item \textbf{Memory Stride Calculation:} To access data in a flat memory buffer, the engine calculates the \textit{stride}—the number of elements to skip to reach the next index in a given dimension.
-\end{enumerate}
+\begin{description}
+	\item [Parsing] The string is analyzed to create bitmasks representing index occupancy.
+	\item [Contraction Mapping] The engine identifies which indices are shared (summation) and which are unique (free).
+	\item [Memory Stride Calculation] To access data in a flat memory buffer, the engine calculates the \textit{stride}—the number of elements to skip to reach the next index in a given dimension.
+\end{description}
 
 \subsection{Execution Strategies and Algorithmic Diversity}
 
-% NOTE(Diego): che vuol dire "universal" in un testo accademico è bene non usare termini, aggettivi o avverbi senza definirli prima. Adesso io capisco che tu probabilmente intendi che possa prendere una qualunque stringa nel linguaggio che descrive le una sommatoria nella convezione di Einstein e la esegua in modo efficiente, però in generale devi definirlo prima.
-The implementation of a universal \texttt{einsum} engine requires a multi-tiered execution strategy. Because the Einstein notation is so expressive, no single algorithm can handle every case with peak efficiency. Instead, we present different implementations that fit different use cases, strarting with a general unoptimized algorithm and moving towards better performing options.
+Since the Einstein notation is so expressive, no single algorithm can handle every case with peak efficiency. For this reason we present different implementations that fit different use cases, strarting with a general unoptimized algorithm and moving towards better performing options.
 
-\begin{enumerate} % NOTE(Diego): ambiente description
-	% NOTE(Diego): cosa vuol dire odometer in questo contesto?
-	\item \textbf{Generalized Odometer Interpretation:}
-	      The most flexible approach is the Odometer-based iteration. This strategy treats the $N$-dimensional space as a single flat counter. It identifies every unique index in the notation (both free and summed) and builds a virtual "odometer" where each gear corresponds to a dimension size.
+\begin{description}
+	\item [Generalized Odometer Interpretation:]
+	      The most flexible approach is the Odometer-based iteration.
+	      This strategy treats the $N$-dimensional space as a single flat counter.
+	      It identifies every unique index in the notation (both free and summed) and builds a virtual ``odometer'',
+	      an instrument used to measure distances traveled by cars, where each gear corresponds to a dimension size. Every time the odometer ticks the counter advances by one in the lowest dimension, and when it overflows, it resets to zero and advances the next gear or, in our case, the next dimension in the tensor.
+	      In computational terms, this allows us to simulate a nested loop structure of arbitrary depth $N$ without requiring hard-coded loops. By maintaining a coordinate vector that "ticks" forward, the system can map every multidimensional index $(i_0, i_1, \dots, i_n)$ to a linear memory offset using the formula:
+	      \begin{equation}
+		      \text{Offset} = \sum_{d=0}^{n-1} \left( idx_d \times \text{stride}_d \right)
+	      \end{equation}
+	      While this method is capable of handling arbitrary rank-N tensors, where the rank is the number of dimensions of the tensor, without pre-compilation, it is limited by the overhead of coordinate-to-offset calculations performed inside the innermost loop. It serves as a study for the genuine implementation of the algorithm that is capable of handling any tensor.
 
-		% NOTE(Diego): cos'è il rango di un tensore?
-	      While this method is capable of handling arbitrary rank-N tensors without pre-compilation, it is limited by the overhead of coordinate-to-offset calculations performed inside the innermost loop. It serves as a study for the genuine implementation of the algorithm that is capable of handling any tensor.
-
-	\item \textbf{JIT-Code Generation and Specialization:}
+	\item [JIT-Code Generation and Specialization:]
 	      Another possible strategy is \textbf{Just-In-Time (JIT)} compilation. Instead of calling a library, the engine generates a raw C or C++ source file containing the exact nested loops required for the specific tensor shapes at hand.
 
 	      By hardcoding the loop bounds and strides, the system allows the compiler to perform aggressive optimizations like \textbf{SIMD vectorization} and \textbf{Loop Unrolling}. This eliminates the "index lookup" overhead entirely, creating a zero-overhead kernel specialized for a single mathematical task.
-	\item \textbf{Canonical Permutation and Flattening:}
+	\item [Canonical Permutation and Flattening:]
 	      By using a \textbf{Permute-Flatten} strategy we can treat the operation as a \textbf{matrix multiplication}. This involves reordering the axes of the input tensors so that the summation indices are grouped contiguously.
 
 	      Once the data is rearranged, the multidimensional tensor is "flattened" into a 2D matrix view. This allows the system to treat a 4D or 6D contraction as a simple 2D \texttt{GEMM} operation, drastically reducing the complexity from $O(d^n)$ to $O(M \cdot K \cdot N)$, where $M, K, N$ are the products of the respective dimension groups.
 
-	\item \textbf{BLAS Pattern Dispatching:}
+	\item [BLAS Pattern Dispatching:]
 	      When treating 1D or 2D patterns (such as Dot, GER, or GEMV), the best solution is to route the data to \textbf{Basic Linear Algebra Subprograms (BLAS)}. These are hardware-vendor-tuned kernels (like Intel MKL or Apple Accelerate) that use sophisticated cache-blocking and tiling techniques.
 
 	      By utilizing BLAS, we ensure that standard operations achieve the peak theoretical FLOPS (Floating Point Operations Per Second) of the host CPU or GPU.
 
-\end{enumerate}
+\end{description}
 
-% NOTE(Diego): indecidibilità è un termine già preso da un'altro campo dell'informatica e usarlo crea una certa aspettativa nel lettore. Il fatto che esestano dei casi in cui la sintassi è ambigua con solo due operandi invece che tre è una cosa normale che è bene far notare ma nulla che meriti una intera sezione con un titolo così pomposo.
-\section{Undecidability and the Necessity of Explicit Indices}
-
-A core theoretical problem in tensor computing is the ambiguity that arises without \textbf{Explicit Indexing}. In a coordinate-free notation, an expression like $A \otimes B$ is ambiguous.
-
-\subsection{The State Space of Contractions}
-Given two 3rd-order tensors, there are dozens of ways they could interact. Without explicit indices (e.g., \texttt{"ijk,klm"}), a computer cannot decide which dimensions should be summed and what the final dimension should be.
-
-\subsection{Resolving Ambiguity}
-
-Explicit indices serve as a \textbf{Schema}. They resolve the "Undecidability Problem" by providing a strict map of the data topology. Without this metadata, the engine would have to guess the user's intent, leading to non-deterministic results.
-
-\section{Conclusion}
-
-% NOTE(Diego): "the cornerstone of modern engineering" peso hai già capito dove sia il problema...
-This work seeks to demonstrate that while the Einstein sum was invented as a simple way to express tensor contractions, its efficient implementation is the cornerstone of modern engineering. Whether we are optimizing a neural network or designing the structural perimeter of an architectural complex, the ability to rapidly contract tensors is what enables us to simplify complex computations in vast contextes.
-
-By exploring these implementations, this work aims to provide a clear roadmap for building efficient tensor libraries and to contribute to the broader field of computational tensor calculus.
+This work seeks to demonstrate that while the Einstein sum was invented as a simple way to express tensor contractions, its implementation has many different uses. Whether we are optimizing a neural network or designing the structural perimeter of an architectural complex, the einsum allows us to simplify complex computations.
 
 \chapter{Implementations of the Einstein sum}
 \label{chap:Implementations}
@@ -181,30 +191,30 @@ By exploring these implementations, this work aims to provide a clear roadmap fo
 \noindent This chapter presents the different implementations of the Einstein sum.
 \section{Generalized Tensor Contraction via Odometer Iteration}
 
-This foundational implementation provides a generalized approach to tensor contraction by treating the dimensions of the tensors as units of measure for an \textbf{Odometer}. This object allows the system to systematically iterate through all possible index combinations required by the Einstein summation notation. This method is built upon the principle of explicit summation, where every calculation is performed by manually traversing each coordinate of the tensors involved.
+This first implementation provides a generalized approach to tensor contraction by treating the dimensions of the tensors as units of measure for an \textbf{Odometer}. This object allows the system to systematically iterate through all possible index combinations required by the Einstein summation notation. This method is built upon the principle of explicit summation, where every calculation is performed by manually traversing each coordinate of the tensors involved.
 
-While this approach offers high clarity for educational purposes and absolute flexibility across tensor ranks, its computational complexity grows exponentially. For a tensor of rank $n$ and dimension $d$, the total iterations required is $d^n$, making it a robust ``one-size-fits-all'' structure primarily suitable for small-to-medium datasets.
+While this approach offers high clarity for educational purposes and flexibility across tensor ranks, its computational complexity grows exponentially. For a tensor of rank $n$ and dimension $d$, the total iterations required is $d^n$, making it a robust ``one-size-fits-all'' structure primarily suitable for small datasets.
 
 \subsection{The Technical Architecture}
 
 The implementation relies on three core components to manage the complexity of multi-dimensional spaces: \textbf{Lexicographic Stepping, Bitwise Labeling, and Linear Offsetting}.
 
-\begin{enumerate}
-	\item \textbf{Lexicographic Stepping (next\_indices):} The core of the iteration logic is the \texttt{next\_indices} function. This simulates a multi-dimensional counter that increments in row-major order.
-	      \begin{itemize}
+\begin{description}
+	\item [Lexicographic Stepping (next\_indices):] The core of the iteration logic is the \texttt{next\_indices} function. This simulates a multi-dimensional counter that increments in row-major order.
+	      \begin{description}
 		      \item It identifies the least-significant dimension (the fastest-changing index).
 		      \item It increments the index until the maximum bound is reached, at which point it ``carries'' the increment to the next more-significant dimension.
-	      \end{itemize}
+	      \end{description}
 	      This logic allows a single flat loop to simulate an arbitrary number of nested loops, enabling the code to handle any tensor rank dynamically.
 
-	\item \textbf{Bitwise Labeling (IndexBitmap):} To manage Einstein notation labels (e.g., 'i', 'j', 'k'), the system utilizes an \texttt{IndexBitmap}. This converts lowercase letters into a 26-bit integer.
+	\item [Bitwise Labeling (IndexBitmap):] To manage Einstein notation labels (e.g., 'i', 'j', 'k'), the system utilizes an \texttt{IndexBitmap}. This converts lowercase letters into a 26-bit integer.
 	      \[ \text{Bitmap} = \sum \text{bit}(c - \text{'a'}) \]
 	      This allows for nearly instantaneous membership tests. Finding common indices between two tensors is reduced to a simple bitwise \texttt{AND} operation, eliminating expensive string comparisons during the inner loops of the summation.
 
-	\item \textbf{Linear Offset Calculation:} Data is stored in a contiguous memory buffer following a row-major model. The \texttt{compute\_offset} function translates a multi-dimensional coordinate into a single memory address using a Horner-like scheme:
+	\item [Linear Offset Calculation:] Data is stored in a contiguous memory buffer following a row-major model. The \texttt{compute\_offset} function translates a multi-dimensional coordinate into a single memory address:
 	      \[ \text{Offset} = \sum_{i=0}^{n-1} \left( \text{index}_i \cdot \prod_{j=i+1}^{n-1} \text{shape}_j \right) \]
 	      While this provides $O(n)$ access time, the dynamic recalculation of these offsets during each iteration step accounts for the primary logic overhead of this approach.
-\end{enumerate}
+\end{description}
 
 \subsection{Execution and Performance Characteristics}
 
@@ -224,7 +234,7 @@ In the final execution stage, the \texttt{einsum} function creates a ``combined 
 \end{table}
 
 \subsection{Summary of the Generalized Engine}
-The primary strength of this implementation is its \textbf{Source Anonymity}. Because it does not rely on hardcoded loops or specific patterns, it acts as a universal interpreter for Einstein notation. It serves as the essential fallback mechanism for the system when a contraction does not match optimized BLAS patterns or requires a level of dimensionality that exceeds the limits of specialized kernels.
+The primary strength of this implementation is its \textbf{Source Anonymity}. Because it does not rely on hardcoded loops or specific patterns, it acts as an interpreter for Einstein notation.
 
 \section{Just-In-Time (JIT) Code Generation and AOT Specialization}
 
@@ -236,22 +246,22 @@ The primary shift here is the move from runtime interpretation to \textbf{Ahead-
 
 The generator utilizes three primary optimization strategies: \textbf{Literal Stride Injection, Hierarchical Loop Ordering, and Compiler-Assisted Vectorization}.
 
-\begin{enumerate}
-	\item \textbf{Literal Stride Injection:} In generalized functions, strides are looked up in arrays at runtime. This generator calculates these strides once and prints them as literal constants.
+\begin{description}
+	\item [Literal Stride Injection:] In generalized functions, strides are looked up in arrays at runtime. This generator calculates these strides once and prints them as literal constants.
 
-	      For an index ``ij'' with shape $[7, 3]$, the generator outputs the direct arithmetic \texttt{(i * 3) + j}. This allows the C compiler to utilize \textbf{LEA (Load Effective Address)} instructions, calculating memory offsets in a single clock cycle.
+	      For an index ``ij'' with shape $[7, 3]$, the generator outputs the direct arithmetic \texttt{(i * 3) + j}.
 
-	\item \textbf{Hierarchical Loop Ordering:} The generator enforces a strict hierarchy to maximize \textbf{Data Locality}:
-	      \begin{itemize}
-		      \item \textbf{Outer Shell:} Iterates over the Free Indices (those present in the output), ensuring a contiguous and organized traversal of the destination memory.
-		      \item \textbf{Inner Core:} Iterates over Summation Indices.
-	      \end{itemize}
+	\item [Hierarchical Loop Ordering:] The generator enforces a strict hierarchy to maximize \textbf{Data Locality}:
+	      \begin{description}
+		      \item [Outer Shell:] Iterates over the Free Indices (those present in the output), ensuring a contiguous and organized traversal of the destination memory.
+		      \item [Inner Core:] Iterates over Summation Indices.
+	      \end{description}
 	      This structure maximizes \textbf{Temporal Locality} by keeping the accumulation sum for a specific output element within a high-speed CPU register for the entire duration of the summation loop.
 
-	\item \textbf{Compiler-Driven Vectorization:} By outputting high-level C code rather than raw assembly, the implementation leverages the full power of modern optimizers (GCC/Clang).
+	\item [Compiler-Driven Vectorization:] By outputting high-level C code rather than raw assembly, the implementation leverages the full power of modern optimizers.
 
 	      Because loop bounds (e.g., \texttt{i < 7}) are known at compile time, the compiler can perform aggressive \textbf{Loop Unrolling} and automatically inject \textbf{SIMD (Single Instruction, Multiple Data)} instructions to process multiple floating-point operations in parallel.
-\end{enumerate}
+\end{description}
 
 \subsection{Performance and Memory Trade-offs}
 
@@ -269,34 +279,47 @@ The generator utilizes three primary optimization strategies: \textbf{Literal St
 \end{table}
 
 \subsection{Summary of the JIT Engine}
-This approach treats Einstein notation as a high-level language, translating it into the most efficient mathematical representation possible for the underlying hardware. By moving the computational burden from the runtime environment to the \textbf{Compilation Phase}, it minimizes logic overhead and memory latency, making it adapt for high-performance production environments where tensor shapes are known in advance.
+This approach treats Einstein notation as a high-level language. By moving the computational burden from the runtime environment to the \textbf{Compilation Phase}, it minimizes logic overhead and memory latency, making it adapt for production environments where tensor shapes are known in advance.
 \section{Canonical Contraction through Permutation and Flattening}
 
-This implementation introduces a mathematical transformation designed to bridge the gap between abstract tensor notation and high-performance linear algebra. Rather than iterating through a high-dimensional space with a generalized odometer, this approach transforms any arbitrary $N$-dimensional Einstein summation into a standard 2D matrix multiplication ($C = A \times B$).
+This implementation introduces a transformation designed to bridge the gap between abstract tensor notation and high-performance linear algebra. Rather than iterating through a high-dimensional space with a generalized odometer, this approach transforms any arbitrary $N$-dimensional Einstein summation into a standard 2D matrix multiplication ($C = A \times B$).
 
-By reducing the problem to a canonical matrix form, the system can leverage highly optimized hardware routines while maintaining the flexibility to handle complex tensor geometries.
+By reducing the problem to a canonical matrix form, the system can leverage optimized hardware routines while maintaining the flexibility to handle complex tensor geometries.
 
 \subsection{The Transformation Pipeline}
 
-The core logic follows a three-stage pipeline: \textbf{Permute, Flatten, and Multiply}.
+The core logic follows a three-stage pipeline: \textbf{Permute, Flatten, and Multiply}. This strategy is designed to reduce any arbitrary $N$-dimensional contraction into a single, \textbf{GEMM} (General Matrix Multiplication) call.
 
-\begin{enumerate}
-	\item \textbf{Tensor Permutation and Grouping:} To treat a tensor as a matrix, the memory layout must be rearranged so that relevant dimensions are contiguous. The function \texttt{matrix\_permute} reorders the axes of the source tensors:
-	      \begin{itemize}
-		      \item \textbf{Tensor A} indices are grouped into $[ \text{Free Indices}, \text{Summation Indices} ]$.
-		      \item \textbf{Tensor B} indices are grouped into $[ \text{Summation Indices}, \text{Free Indices} ]$.
-	      \end{itemize}
-	      This grouping ensures that the ``right side'' of Tensor A (the dimensions being summed over) aligns perfectly with the ``left side'' of Tensor B.
+\begin{description}
+	\item [Tensor Permutation and Grouping:] To treat a tensor as a matrix, the memory layout must be rearranged so that relevant dimensions are contiguous. The function \texttt{matrix\_permute} reorders the axes of the source tensors based on their roles in the Einstein notation:
+	      \begin{description}
+		      \item [Tensor A:] Indices are grouped into $[ \text{Free Indices}, \text{Summation Indices} ]$.
+		      \item [Tensor B:] Indices are grouped into $[ \text{Summation Indices}, \text{Free Indices} ]$.
+	      \end{description}
+	      This grouping ensures that the ``right side'' of Tensor A (the dimensions being summed over) aligns perfectly with the ``left side'' of Tensor B in linear memory.
 
-	\item \textbf{Flattening into 2D Matrices:} Once dimensions are grouped, the implementation calculates the product of the shapes in each group to determine the effective number of rows and columns.
-	      Let $I$ be the set of free indices in $A$, and $K$ be the set of shared summation indices. Tensor $A$ is reshaped into a matrix of size $M \times L$, where:
-	      \[ M = \prod_{i \in I} \text{shape}(i) \quad \text{and} \quad L = \prod_{k \in K} \text{shape}(k) \]
-	      Similarly, Tensor $B$ is reshaped into a matrix of size $L \times N$, where $N$ is the product of the free indices in $B$.
+	\item [Formal Proof via Matricization:] The validity of this reduction is grounded in the mathematical theory of \textbf{unfolding} or \textbf{matricization} \cite{kolda2009tensor}. Let $\mathcal{A}$ be a tensor of rank $N$. A matricization is a bijective mapping that reorders the elements of $\mathcal{A}$ into a matrix $A$.
 
-	\item \textbf{Optimized Multiplication and Reshaping:} With the tensors transformed into 2D matrices, the code performs a standard accumulation:
-	      \[ C_{ij} = \sum_{k=1}^{L} A_{ik} \cdot B_{kj} \]
+	      \textit{Proof:} Consider the generalized contraction $\mathcal{C}_{IJ} = \sum_{K} \mathcal{A}_{IK} \mathcal{B}_{KJ}$. We define a mapping $\phi$ that flattens the multi-index $I$ into a single row index $i$, and $K$ into a column index $k$. If $M = \prod \text{shape}(I)$ and $L = \prod \text{shape}(K)$, then $A \in \mathbb{R}^{M \times L}$ where $A_{\phi(I), \phi(K)} = \mathcal{A}_{IK}$. By performing a similar mapping for $\mathcal{B}$ into $B \in \mathbb{R}^{L \times N}$, the summation becomes:
+	      \begin{equation}
+		      C_{ij} = \sum_{k=1}^{L} A_{ik} B_{kj}
+	      \end{equation}
+	      This expression is identical to the definition of matrix multiplication. Because the mapping $\phi$ is a bijection determined by the tensor's strides, the algebraic integrity of the operation is preserved \cite{roberts2020einsum}. $\square$
+
+
+
+	\item [Flattening into 2D Matrices:] Once dimensions are grouped, the implementation calculates the product of the shapes in each group to determine the effective number of rows and columns. Let $I$ be the set of free indices in $A$, and $K$ be the set of shared summation indices. Tensor $A$ is treated as a matrix of size $M \times L$, where:
+	      \begin{equation}
+		      M = \prod_{i \in I} \text{shape}(i) \quad \text{and} \quad L = \prod_{k \in K} \text{shape}(k)
+	      \end{equation}
+	      Once the permutation is complete, we pass the resulting memory pointer to the BLAS routine, effectively treating the multidimensional data as a 2D array.
+
+	\item [Multiplication and Reshaping:] With the tensors transformed, the code invokes a BLAS-compliant multiplication:
+	      \begin{equation}
+		      C_{ij} = (A \cdot B)_{ij}
+	      \end{equation}
 	      The result initially exists in a canonical order where all free indices from $A$ appear before those from $B$. A final \texttt{matrix\_permute} call is performed on the intermediate result to match the specific output notation requested by the user.
-\end{enumerate}
+\end{description}
 
 \subsection{Performance and Memory Trade-offs}
 
@@ -314,13 +337,11 @@ The core logic follows a three-stage pipeline: \textbf{Permute, Flatten, and Mul
 \end{table}
 
 \subsection{Summary of the Permute Logic}
-The helper function \texttt{matrix\_permute} acts as the engine of this implementation. It maps the linear index of the destination tensor back to the coordinates of the source tensor. By iterating through the \textbf{destination} linearly, it ensures that memory writes are contiguous, which is vital for utilizing the CPU's write-combine buffers and maximizing cache line efficiency.
+The helper function \texttt{matrix\_permute} maps the linear index of the destination tensor back to the coordinates of the source tensor. By iterating through the \textbf{destination} linearly, it ensures that memory writes are contiguous.
 
 \section{BLAS-Accelerated Pattern Recognition and Greedy Dispatch}
 
 This implementation utilizes a \textbf{Greedy Pattern Matching} strategy to map Einstein notation to the highly optimized Basic Linear Algebra Subprograms (\textbf{BLAS}) library. Instead of treating every contraction as a generic tensor operation, this system attempts to identify standard linear algebra archetypes that can be executed using hardware-tuned Level-1, Level-2, or Level-3 BLAS routines.
-
-By selecting the most specific applicable pattern, the engine maximizes performance through superior cache locality and reduced memory traffic, providing a significant speedup over generalized methods.
 
 \subsection{The Pattern Hierarchy}
 
@@ -374,5 +395,6 @@ In future iterations, this would allow the system to handle complex patterns lik
 
 \subsection{Summary of the BLAS Engine}
 This approach transforms Einstein notation from a mathematical abstraction into a sequence of high-performance library calls. By identifying the most specific ``building block'' for a given operation, the engine ensures that simple operations remain fast while complex matrix multiplications reach the peak theoretical performance of the hardware.
-
+\bibliographystyle{plain}
+\bibliography{bibliography}
 \end{document}
