@@ -1,6 +1,6 @@
 \documentclass[binding=0.6cm]{sapthesis}
 \usepackage{microtype}
-\usepackage[italian]{babel}
+\usepackage[english]{babel}
 \usepackage[utf8]{inputenc}
 \usepackage{listings}
 \usepackage{xcolor}
@@ -349,21 +349,21 @@ The implementation utilizes a hierarchy of functions, prioritizing specialized k
 
 \begin{enumerate}
 	\item \textbf{Level-1 Operations (Vector-Vector):}
-	      \begin{itemize}
-		      \item \textbf{DOT:} Detects patterns like \texttt{"i,i->"} to perform a scalar dot product.
-		      \item \textbf{AXPY:} Recognizes \texttt{"i,i->i"} for constant-multiplication and vector addition ($y := \alpha x + y$).
-	      \end{itemize}
+	      \begin{description}
+		      \item [DOT:] Detects patterns like \texttt{"i,i->"} to perform a scalar dot product.
+		      \item [AXPY:] Recognizes \texttt{"i,i->i"} for constant-multiplication and vector addition ($y := \alpha x + y$).
+	      \end{description}
 
 	\item \textbf{Level-2 Operations (Matrix-Vector):}
-	      \begin{itemize}
-		      \item \textbf{GER:} Identifies \texttt{"i,j->ij"} to perform a rank-1 outer product.
-		      \item \textbf{GEMV:} Matches \texttt{"ij,j->i"} or \texttt{"i,ij->j"} to execute matrix-vector multiplication, supporting both standard and transposed variants.
-	      \end{itemize}
+	      \begin{description}
+		      \item [GER:] Identifies \texttt{"i,j->ij"} to perform a rank-1 outer product.
+		      \item [GEMV:] Matches \texttt{"ij,j->i"} or \texttt{"i,ij->j"} to execute matrix-vector multiplication, supporting both standard and transposed variants.
+	      \end{description}
 
 	\item \textbf{Level-3 Operations (Matrix-Matrix):}
-	      \begin{itemize}
-		      \item \textbf{GEMM:} The most critical kernel, matching \texttt{"ij,jk->ik"}. This represents the gold standard of optimization, where $O(n^3)$ operations are performed on $O(n^2)$ data, allowing for maximum data reuse.
-	      \end{itemize}
+	      \begin{description}
+		      \item [GEMM:] The most critical kernel, matching \texttt{"ij,jk->ik"}. This represents the gold standard of optimization, where $O(n^3)$ operations are performed on $O(n^2)$ data, allowing for maximum data reuse.
+	      \end{description}
 \end{enumerate}
 
 
