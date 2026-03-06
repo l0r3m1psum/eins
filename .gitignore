@@ -2,6 +2,7 @@
 # Ignore everything by default
 *
 
+
 # Allow Git to see directories so we can un-ignore .c files inside them
 !*/
 
@@ -9,12 +10,15 @@
 !*.c
 !.gitignore
 !*.h
-
 # Track thesis directory
 !thesis/images/**.pdf
 !thesis/
 !thesis/**.tex
 !thesis/**.pdf
+
+# Track results directory with graphics
+!results/
+!results/**
 
 # Explicitly ignore common editor and build artifacts (redundant with `*` but explicit for clarity)
 .vscode/

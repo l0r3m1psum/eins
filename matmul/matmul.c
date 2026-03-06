@@ -113,9 +113,24 @@ Matrix* einsum_matmul(const char *notation, const Matrix *A, const Matrix *B) {
     matrix_free(permutedA);
     matrix_free(permutedB);
 
-    // --- RESHAPE/PERMUTE OUTPUT ---
-    // Currently C_data is laid out as [A_Free_Dims..., B_Free_Dims...]
-    // We need to reshape it to that N-dim shape, then permute it to match 'out' string.
+
+    {
+        IndexBitmap A_free = 0, B_free = 0;
+        for (int i = 0; i < countA_free; i++) {
+            char c = in1[permA[i]];
+            A_free |= (1u << (c - 'a'));
+        }
+        for (int i = 0; i < countB_free; i++) {
+            char c = in2[permB[countB_sum + i]];
+            B_free |= (1u << (c - 'a'));
+        }
+        
+        // If A_free and B_free overlap, reject (pattern like ijk,ikl->ijl)
+        if ((A_free & B_free) != 0) {
+            free(C_data);
+            return NULL;
+        }
+    }
     
     // Construct the shape of the intermediate result
     int intermediate_ndim = countA_free + countB_free;
@@ -127,14 +142,10 @@ Matrix* einsum_matmul(const char *notation, const Matrix *A, const Matrix *B) {
     for (int i=0; i<countA_free; i++) {
         char original_char = in1[permA[i]];
         intermediate_indices[idx_ptr] = original_char;
-        // Need to find the size of this char. It is in permutedA, dim i.
-        // Actually we destroyed permutedA. We must look up original A.
-        // permA[i] is the original index in A.
         intermediate_shape[idx_ptr] = A->shape[permA[i]];
         idx_ptr++;
     }
     for (int i=0; i<countB_free; i++) {
-        // The free indices of B were at the END of permB
         int original_dim_idx = permB[countB_sum + i]; 
         intermediate_indices[idx_ptr] = in2[original_dim_idx];
         intermediate_shape[idx_ptr] = B->shape[original_dim_idx];
@@ -153,14 +164,13 @@ Matrix* einsum_matmul(const char *notation, const Matrix *A, const Matrix *B) {
             return NULL;
         }
         free(C_intermediate->data);
-        C_intermediate->data = C_data; // take ownership
+        C_intermediate->data = C_data; 
         free(intermediate_shape);
 
         // If output is also scalar (out length 0), return directly
         if (out[0] == '\0') {
             return C_intermediate;
-        }
-        // Otherwise, fall through: we'll attempt to permute a 1-D container
+        
     } else {
         C_intermediate = matrix_create_nd(intermediate_ndim, intermediate_shape, intermediate_indices);
         if (!C_intermediate) {
@@ -168,13 +178,12 @@ Matrix* einsum_matmul(const char *notation, const Matrix *A, const Matrix *B) {
             free(C_data);
             return NULL;
         }
-        free(C_intermediate->data); // replace calloc'd data with our computed data
-        C_intermediate->data = C_data; // take ownership
+        free(C_intermediate->data); 
+        C_intermediate->data = C_data; 
         free(intermediate_shape);
     }
 
-    // Final Permutation to match requested 'out' string
-    // We have C_intermediate with indices e.g. "ij" but user might want "ji".
+   
     int final_perm[16];
     for (int i = 0; out[i]; i++) {
         char target = out[i];
@@ -187,7 +196,6 @@ Matrix* einsum_matmul(const char *notation, const Matrix *A, const Matrix *B) {
         }
     }
 
-    // If intermediate_ndim was 0 we created a 1-D container; ensure permutation length matches
     if (intermediate_ndim <= 0) {
         Matrix *FinalResult = matrix_permute(C_intermediate, final_perm);
         matrix_free(C_intermediate);
