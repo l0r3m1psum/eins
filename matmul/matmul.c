@@ -170,7 +170,7 @@ Matrix* einsum_matmul(const char *notation, const Matrix *A, const Matrix *B) {
         // If output is also scalar (out length 0), return directly
         if (out[0] == '\0') {
             return C_intermediate;
-        
+        }
     } else {
         C_intermediate = matrix_create_nd(intermediate_ndim, intermediate_shape, intermediate_indices);
         if (!C_intermediate) {
