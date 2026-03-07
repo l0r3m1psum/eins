@@ -42,7 +42,7 @@
 \maketitle
 \dedication{Da grandi poteri,\\ derivano grandi responsabilità.}
 \begin{abstract}
-	This work explores the different possible implementation of the Einstein sum, a mathematical notation used in many fields of science, such as physics and engineering, to represent the summation of products of tensors. The Einstein sum is a powerful tool for simplifying complex mathematical expressions and can be used to derive important results in various fields. In this work, we will discuss the different ways to implement the Einstein sum, including its use in tensor calculus. We will also explore the advantages and disadvantages of each implementation.
+	This work explores the different possible implementation of the Einstein sum, a mathematical notation used in many fields of science, such as physics and engineering, to represent the summation of products of tensors. The Einstein sum is a powerful tool for simplifying complex mathematical expressions and can be used to derive important results in various fields. In this work, we will discuss different ways to implement the Einstein sum, including its use in tensor calculus. We will also explore the advantages and disadvantages of each implementation.
 \end{abstract}
 
 \tableofcontents
@@ -192,8 +192,6 @@ Since the Einstein notation is so expressive, no single algorithm can handle eve
 	      By utilizing BLAS, we ensure that standard operations achieve the peak theoretical FLOPS (Floating Point Operations Per Second) of the host CPU or GPU.
 \end{description}
 
-This work seeks to demonstrate that while the Einstein sum was invented as a simple way to express tensor contractions, its implementation has many different uses. Whether we are optimizing a neural network or designing the structural perimeter of an architectural complex, the einsum allows us to simplify complex computations.
-
 \chapter{Implementations of the Einstein sum}
 \label{chap:Implementations}
 
@@ -298,7 +296,7 @@ The generator utilizes three primary optimization strategies: \textbf{Literal St
 This approach treats Einstein notation as a high-level language. By moving the computational burden from the runtime environment to the \textbf{Compilation Phase}, it minimizes logic overhead and memory latency, making it adapt for production environments where tensor shapes are known in advance.
 \section{Canonical Contraction through Permutation and Flattening}
 
-This implementation introduces a transformation designed to bridge the gap between abstract tensor notation and high-performance linear algebra. Rather than iterating through a high-dimensional space with a generalized odometer, this approach transforms any arbitrary $N$-dimensional Einstein summation into a standard 2D matrix multiplication ($C = A \times B$).
+This implementation introduces a transformation designed to bridge the gap between abstract tensor notation and linear algebra. Rather than iterating through a high-dimensional space with a generalized odometer, this approach transforms any arbitrary $N$-dimensional Einstein summation into a standard 2D matrix multiplication ($C = A \times B$).
 
 By reducing the problem to a canonical matrix form, the system can leverage optimized hardware routines while maintaining the flexibility to handle complex tensor geometries.
 
@@ -381,7 +379,7 @@ The implementation utilizes a hierarchy of functions, prioritizing specialized k
 
 	\item \textbf{Level-3 Operations (Matrix-Matrix):}
 	      \begin{description}
-		      \item [GEMM:] The most critical kernel, matching \texttt{"ij,jk->ik"}. This represents the gold standard of optimization, where $O(n^3)$ operations are performed on $O(n^2)$ data, allowing for maximum data reuse.
+		      \item [GEMM:] The most critical kernel, matching \texttt{"ij,jk->ik"}.
 	      \end{description}
 \end{enumerate}
 
@@ -410,9 +408,7 @@ A unique feature of this implementation is the theoretical groundwork for \textb
 In future iterations, this would allow the system to handle complex patterns like \texttt{"ii->"} (Matrix Trace) or \texttt{"xii,xii->"} (Diagonal Dot Product) without moving data. By calculating a custom stride based on the tensor shape, the engine could traverse diagonal elements as if they were a contiguous vector, further reducing the need for temporary memory allocations or tensor permutations.
 
 \subsection{Summary of the BLAS Engine}
-
-This approach transforms Einstein notation from a mathematical abstraction into a sequence of high-performance library calls. By identifying the most specific ``building block'' for a given operation, the engine ensures that simple operations remain fast while complex matrix multiplications reach the peak theoretical performance of the hardware.
-
+This approach allows us to leverage the BLAS library. By identifying the most specific ``building block'' for a given operation, we ensure that simple operations remain fast while complex matrix multiplications still take advantage of the optimized BLAS routines.
 \bibliographystyle{plain}
 \bibliography{bibliography}
 
